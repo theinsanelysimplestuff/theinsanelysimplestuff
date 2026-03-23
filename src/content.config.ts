@@ -9,10 +9,24 @@ const blog = defineCollection({
   schema: ({ image }) =>
     z.object({
       author: z.string().default(SITE.author),
-      pubDatetime: z.date(),
+      pubDatetime: z.union([z.string(), z.date()]).transform(val => {
+        if (typeof val === 'string') {
+          if (!val.includes('+') && !val.endsWith('Z')) {
+            return new Date(val + '+05:00');
+          }
+          return new Date(val);
+        }
+        return val;
+      }),
       modDatetime: z.union([z.string(), z.date()]).optional().nullable().transform(val => {
         if (!val || val === '') return null;
-        return new Date(val);
+        if (typeof val === 'string') {
+          if (!val.includes('+') && !val.endsWith('Z')) {
+            return new Date(val + '+05:00');
+          }
+          return new Date(val);
+        }
+        return val as Date;
       }),
       title: z.string(),
       featured: z.boolean().optional(),

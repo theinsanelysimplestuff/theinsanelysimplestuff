@@ -17,8 +17,8 @@ collections:
     format: frontmatter
     fields:
       - { label: "Author", name: "author", widget: "string", default: "Malaika Noor" }
-      - { label: "Publish Date", name: "pubDatetime", widget: "datetime", date_format: "YYYY-MM-DD", time_format: "HH:mm:ss", format: "YYYY-MM-DDTHH:mm:ssZ", picker_utc: false }
-      - { label: "Modified Date", name: "modDatetime", widget: "datetime", date_format: "YYYY-MM-DD", time_format: "HH:mm:ss", format: "YYYY-MM-DDTHH:mm:ssZ", required: false, picker_utc: false }
+      - { label: "Publish Date", name: "pubDatetime", widget: "datetime", picker_utc: true }
+      - { label: "Modified Date", name: "modDatetime", widget: "datetime", required: false, picker_utc: true }
       - { label: "Title", name: "title", widget: "string" }
       - { label: "Featured", name: "featured", widget: "boolean", required: false }
       - { label: "Draft", name: "draft", widget: "boolean", required: false }
@@ -37,8 +37,8 @@ collections:
     format: frontmatter
     fields:
       - { label: "Author", name: "author", widget: "string", default: "Malaika Noor" }
-      - { label: "Publish Date", name: "pubDatetime", widget: "datetime", date_format: "YYYY-MM-DD", time_format: "HH:mm:ss", format: "YYYY-MM-DDTHH:mm:ssZ", picker_utc: false }
-      - { label: "Modified Date", name: "modDatetime", widget: "datetime", date_format: "YYYY-MM-DD", time_format: "HH:mm:ss", format: "YYYY-MM-DDTHH:mm:ssZ", required: false, picker_utc: false }
+      - { label: "Publish Date", name: "pubDatetime", widget: "datetime", picker_utc: true }
+      - { label: "Modified Date", name: "modDatetime", widget: "datetime", required: false, picker_utc: true }
       - { label: "Title", name: "title", widget: "string" }
       - { label: "Featured", name: "featured", widget: "boolean", required: false }
       - { label: "Draft", name: "draft", widget: "boolean", required: false }
