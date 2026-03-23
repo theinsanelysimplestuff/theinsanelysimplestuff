@@ -1,6 +1,6 @@
 backend:
   name: github
-  repo: theinsanelysimplestuff/theinsanelysimplestuff
+  repo: theinsanelysimplestuff/theinsanelysimplestuff.github.io
   branch: test
   base_url: https://sveltia-cms-auth.malaikanoor7864.workers.dev
   auth_endpoint: auth
