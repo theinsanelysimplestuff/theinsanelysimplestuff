@@ -1,0 +1,50 @@
+backend:
+  name: github
+  repo: theinsanelysimplestuff/theinsanelysimplestuff.github.io
+  branch: main
+  base_url: https://sveltia-cms-auth.malaikanoor7864.workers.dev
+  auth_endpoint: auth
+
+media_folder: "public/images"
+public_folder: "/images"
+
+collections:
+  - name: "lit-lab"
+    label: "Research Reproduced"
+    folder: "src/data/blog/lit-lab"
+    create: true
+    slug: "{{slug}}"
+    format: frontmatter
+    fields:
+      - { label: "Author", name: "author", widget: "string", default: "Malaika Noor" }
+      - { label: "Publish Date", name: "pubDatetime", widget: "datetime", picker_utc: true }
+      - { label: "Modified Date", name: "modDatetime", widget: "datetime", required: false, picker_utc: true }
+      - { label: "Title", name: "title", widget: "string" }
+      - { label: "Featured", name: "featured", widget: "boolean", required: false }
+      - { label: "Draft", name: "draft", widget: "boolean", required: false }
+      - { label: "Tags", name: "tags", widget: "list", required: false }
+      - { label: "OG Image", name: "ogImage", widget: "image", required: false }
+      - { label: "Description", name: "description", widget: "text" }
+      - { label: "Hide Edit Post", name: "hideEditPost", widget: "boolean", required: false }
+      - { label: "Timezone", name: "timezone", widget: "string", required: false }
+      - { label: "Body", name: "body", widget: "markdown" }
+
+  - name: "contents"
+    label: "Content Posts"
+    folder: "src/data/blog"
+    create: true
+    slug: "{{slug}}"
+    format: frontmatter
+    fields:
+      - { label: "Author", name: "author", widget: "string", default: "Malaika Noor" }
+      - { label: "Publish Date", name: "pubDatetime", widget: "datetime", picker_utc: true }
+      - { label: "Modified Date", name: "modDatetime", widget: "datetime", required: false, picker_utc: true }
+      - { label: "Title", name: "title", widget: "string" }
+      - { label: "Featured", name: "featured", widget: "boolean", required: false }
+      - { label: "Draft", name: "draft", widget: "boolean", required: false }
+      - { label: "Tags", name: "tags", widget: "list", required: false }
+      - { label: "OG Image", name: "ogImage", widget: "image", required: false }
+      - { label: "Description", name: "description", widget: "text" }
+      - { label: "Hide Edit Post", name: "hideEditPost", widget: "boolean", required: false }
+      - { label: "Timezone", name: "timezone", widget: "string", required: false }
+      - { label: "Body", name: "body", widget: "markdown" }

@@ -10,12 +10,15 @@ const blog = defineCollection({
     z.object({
       author: z.string().default(SITE.author),
       pubDatetime: z.date(),
-      modDatetime: z.date().optional().nullable(),
+      modDatetime: z.union([z.string(), z.date()]).optional().nullable().transform(val => {
+        if (!val || val === '') return null;
+        return new Date(val);
+      }),
       title: z.string(),
       featured: z.boolean().optional(),
       draft: z.boolean().optional(),
-      tags: z.array(z.string()).default(["others"]),
-      ogImage: image().or(z.string()).optional(),
+      tags: z.array(z.string()).default([]),
+      ogImage: z.string().or(image()).optional(),
       description: z.string(),
       canonicalURL: z.string().optional(),
       hideEditPost: z.boolean().optional(),

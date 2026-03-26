@@ -24,6 +24,9 @@ const backUrl = SITE.showBackButton ? `${Astro.url.pathname}` : "/";
 
     if (!pageFindSearch) return;
 
+    // Avoid duplicate Pagefind UI init in production where astro:after-swap + initial load can both run.
+    if (pageFindSearch.querySelector("form") || pageFindSearch.querySelector(".pagefind-ui__search-input")) return;
+
     const params = new URLSearchParams(window.location.search);
 
     const onIdle = window.requestIdleCallback || (cb => setTimeout(cb, 1));

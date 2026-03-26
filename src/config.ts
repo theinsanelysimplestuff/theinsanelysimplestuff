@@ -1,5 +1,5 @@
 export const SITE = {
-  website: "http://localhost:4321/", // replace this with your deployed domain
+  website: "https://theinsanelysimplestuff.github.io/",
   author: "Malaika Noor",
   profile: "", // portfolio link
   desc: "Writings about AI, maths, programming, and my curiosity about the world.",
@@ -12,7 +12,9 @@ export const SITE = {
   showArchives: true,
   showBackButton: true, // show back button in post detail
   editPost: {
-    enabled: false
+    enabled: false,
+    url: "",
+    text: "",
   },
   dynamicOgImage: true,
   dir: "ltr", // "rtl" | "auto"
