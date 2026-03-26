@@ -1,7 +1,7 @@
 backend:
   name: github
   repo: theinsanelysimplestuff/theinsanelysimplestuff.github.io
-  branch: test-picker-utc
+  branch: main
   base_url: https://sveltia-cms-auth.malaikanoor7864.workers.dev
   auth_endpoint: auth
 
