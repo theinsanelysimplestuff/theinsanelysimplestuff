@@ -1,7 +1,7 @@
 backend:
   name: github
   repo: theinsanelysimplestuff/theinsanelysimplestuff.github.io
-  branch: test
+  branch: test-picker-utc
   base_url: https://sveltia-cms-auth.malaikanoor7864.workers.dev
   auth_endpoint: auth
 
@@ -17,8 +17,8 @@ collections:
     format: frontmatter
     fields:
       - { label: "Author", name: "author", widget: "string", default: "Malaika Noor" }
-      - { label: "Publish Date", name: "pubDatetime", widget: "datetime" }
-      - { label: "Modified Date", name: "modDatetime", widget: "datetime", required: false }
+      - { label: "Publish Date", name: "pubDatetime", widget: "datetime", picker_utc: true }
+      - { label: "Modified Date", name: "modDatetime", widget: "datetime", required: false, picker_utc: true }
       - { label: "Title", name: "title", widget: "string" }
       - { label: "Featured", name: "featured", widget: "boolean", required: false }
       - { label: "Draft", name: "draft", widget: "boolean", required: false }
@@ -37,8 +37,8 @@ collections:
     format: frontmatter
     fields:
       - { label: "Author", name: "author", widget: "string", default: "Malaika Noor" }
-      - { label: "Publish Date", name: "pubDatetime", widget: "datetime" }
-      - { label: "Modified Date", name: "modDatetime", widget: "datetime", required: false }
+      - { label: "Publish Date", name: "pubDatetime", widget: "datetime", picker_utc: true }
+      - { label: "Modified Date", name: "modDatetime", widget: "datetime", required: false, picker_utc: true }
       - { label: "Title", name: "title", widget: "string" }
       - { label: "Featured", name: "featured", widget: "boolean", required: false }
       - { label: "Draft", name: "draft", widget: "boolean", required: false }
