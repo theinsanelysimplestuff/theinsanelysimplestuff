@@ -4,21 +4,36 @@ title: "About"
 ---
 Hi 👋 and welcome to **TheInsanelySimpleStuff** ✨.
 
-This blog is where I write about things I am learning (or have learned) in CS 💻, Maths ➗, or maybe just in general 🤔. The starting goal is not to sound impressive, but to actually explain what is going on and put it in the simplest way possible (...at least I intend to do so 😅).
+I’m Malaika, a curious learner writing about two main things: CS 💻 and Maths ➗, intending to focus more on AI and Systems.
 
-I started my CS journey the hard way 🛤️ and have stumbled on things ranging from seemingly basic to complex ones, spending days, well sometimes weeks to grasp the concepts ⏳. So, this is my best possible effort so others won’t have to go through the same path (hence the name 📝).
+I learned CS the hard way 🛤️, spending days or weeks to understand concepts that should have been easier. So this blog is my little contribution to share what I learned (or am learning) hopefully in a digestible manner and maintain a record 🗂️ of my learning.
 
-This blog will serve two purposes:
+- If something here helps, I’m glad it did.
+- If you’d like to support the blog, thank you 💖.
+- If you spot a mistake or an inconsistency, reach out to me and I’ll fix it.
 
-* Share the knowledge I have gained over time 📚
-* Serve as a resource archive for me 🗂️
+Thanks for stopping by; it’s a pleasure to share this with you 🤞.
 
-I’m not much of an organizer 📦 but I’ll try my best to keep the structure and coherence in the contents and among topics here. Still, you might notice some chaos 😅.
+<div class="kofi-support-icon">
+  <a href="https://noor-malaika.carrd.co" target="_blank" rel="noopener noreferrer">
+    <img src="https://cdn.ko-fi.com/cdn/kofi5.png?v=3" alt="Ko-fi support" width="120" height="120" />
+  </a>
+</div>
 
-This is not meant to be a perfect or “finished” blog 🛠️. It’s more like a public notebook 📓 where I track what I am learning and how my understanding improves over time.
-
-If something here makes your life easier, it probably wasn’t easy for me to figure out either 😌.
-
-If you find it useful, consider supporting 💖. If you find a mistake, reach out to me and I’ll fix it 🛠️.
-
-Was an absolute pleasure seeing you, best of luck 🤞.
+<style>
+.kofi-support-icon {
+  position: fixed;
+  right: 1.5rem;
+  top: 400px !important;
+}
+.kofi-support-icon a {
+  display: inline-block;
+}
+.kofi-support-icon img {
+  width: 120px !important;
+  height: 120px !important;
+  max-width: none;
+  object-fit: contain;
+  display: block;
+}
+</style>
