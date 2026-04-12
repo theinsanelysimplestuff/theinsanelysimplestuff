@@ -19,11 +19,11 @@ const blocks = Array.from({ length: GRID_X * GRID_Y }, (_, bLinear) => {
 });
 ---
 
-<figure class="my-8 rounded-2xl border border-border/60 bg-muted/20 p-4">
+  <figure class="my-8 rounded-2xl border border-border/60 bg-muted/20 p-4">
     <div class="cuda-viz">
     <div class="cuda-grid-title">Grid (2D)</div>
     <div class="cuda-grid-note">
-      global thread id = ((by * gridDim.x + bx) * (blockDim.x * blockDim.y)) + (ty * blockDim.x + tx)
+      Each thread is identified by its block coordinates and its local coordinates inside that block.
     </div>
 
     <div class="cuda-grid-box" style={`--grid-x:${GRID_X};`}>
@@ -38,9 +38,9 @@ const blocks = Array.from({ length: GRID_X * GRID_Y }, (_, bLinear) => {
             {block.threads.map((thread) => (
               <div
                 class="cuda-thread"
-                title={`thread (${thread.tx}, ${thread.ty}), local t${thread.tLinear}, global g${thread.gLinear}`}
+                title={`thread (${thread.tx}, ${thread.ty}) inside block (${block.bx}, ${block.by}), local t${thread.tLinear}`}
               >
-                <span>t{thread.gLinear}</span>
+                <span>t{thread.tLinear}</span>
                 <small>({thread.tx},{thread.ty})</small>
               </div>
             ))}
@@ -51,6 +51,7 @@ const blocks = Array.from({ length: GRID_X * GRID_Y }, (_, bLinear) => {
   </div>
 
   <figcaption class="mt-3 text-sm text-muted-foreground">
+    The kernel uses <code>blockIdx</code> and <code>threadIdx</code> to compute one output coordinate <code>(row, col)</code> per thread.
   </figcaption>
 </figure>
 
