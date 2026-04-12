@@ -1,0 +1,105 @@
+<figure class="my-8 rounded-2xl border border-border/60 bg-muted/20 p-4">
+  <div id="cuda-row-major-2d" class="h-[320px] w-full"></div>
+  <hr class="my-6 border-t-2 border-border/80 opacity-90" />
+  <div id="cuda-row-major-1d" class="mt-4 h-[200px] w-full"></div>
+  <figcaption class="mt-3 text-sm text-muted-foreground">
+    Row-major flattening uses <code>index = row * numberOfColumns + col</code>.
+  </figcaption>
+</figure>
+
+<script>
+  import Plotly from "plotly.js-dist-min";
+
+  const root2D = document.getElementById("cuda-row-major-2d");
+  const root1D = document.getElementById("cuda-row-major-1d");
+
+  if (root2D && root1D) {
+    const rows = 3;
+    const cols = 4;
+
+    const z: number[][] = [];
+    const text2D: string[][] = [];
+    const flatIndices: number[] = [];
+
+    for (let row = 0; row < rows; row += 1) {
+      const zRow: number[] = [];
+      const tRow: string[] = [];
+      for (let col = 0; col < cols; col += 1) {
+        const idx = row * cols + col;
+        zRow.push(idx);
+        tRow.push(`${idx}`);
+        flatIndices.push(idx);
+      }
+      z.push(zRow);
+      text2D.push(tRow);
+    }
+
+    Plotly.newPlot(root2D, [{
+      type: "heatmap",
+      z,
+      text: text2D,
+      texttemplate: "%{text}",
+      textfont: { size: 16, color: "#0f172a" },
+      colorscale: [[0, "#eff6ff"], [0.5, "#7dd3fc"], [1, "#38bdf8"]],
+      showscale: false,
+      hovertemplate: "row=%{y}<br>col=%{x}<br>index=%{z}<extra></extra>",
+    }], {
+      margin: { l: 56, r: 20, t: 56, b: 48 },
+      title: { text: "2D Matrix View", x: 0.5, xanchor: "center", font: { size: 16 } },
+      xaxis: {
+        title: "",
+        showgrid: false,
+        zeroline: false,
+        showline: false,
+        showticklabels: false,
+        ticks: "",
+      },
+      yaxis: {
+        title: "",
+        autorange: "reversed",
+        scaleanchor: "x",
+        scaleratio: 1,
+        showgrid: false,
+        zeroline: false,
+        showline: false,
+        showticklabels: false,
+        ticks: "",
+      },
+      paper_bgcolor: "transparent",
+      plot_bgcolor: "transparent",
+    }, {
+      responsive: true,
+      displaylogo: false,
+      staticPlot: true,
+    });
+    
+    Plotly.newPlot(root1D, [{
+      type: "bar",
+      x: flatIndices,
+      y: flatIndices.map(() => 1),
+      text: flatIndices.map(v => `${v}`),
+      textposition: "inside",
+      textfont: { size: 14, color: "#ffffff" },
+      marker: { color: "#60a5fa", line: { width: 1, color: "#3b82f6" } },
+      hovertemplate: "buffer index=%{x}<extra></extra>",
+    }], {
+      margin: { l: 40, r: 20, t: 48, b: 32 },
+      title: { text: "Flattened 1D Buffer Order", x: 0.5, xanchor: "center", font: { size: 16 } },
+      xaxis: {
+        title: "",
+        showgrid: false,
+        zeroline: false,
+        showline: false,
+        showticklabels: false,
+        ticks: "",
+      },
+      yaxis: { visible: false, range: [0, 1.4] },
+      paper_bgcolor: "transparent",
+      plot_bgcolor: "transparent",
+    }, {
+      responsive: true,
+      displaylogo: false,
+      staticPlot: true,
+    });
+  }
+</script>

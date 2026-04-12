@@ -1,0 +1,261 @@
+---
+author: Malaika Noor
+pubDatetime: 2026-04-11T18:00:00.000Z
+modDatetime: 2026-04-12T18:00:00.000Z
+title: "Learning CUDA Through Matrix Multiplication"
+featured: true
+draft: false
+tags:
+  - cuda
+  - gpu
+  - matrix multiplication
+  - numpy
+  - profiling
+  - colab
+ogImage: ""
+description: A personal walkthrough of finally trying CUDA with matrix multiplication, how the thread mapping works, and how I profiled it against NumPy in a Colab-friendly setup.
+hideEditPost: false
+timezone: ""
+---
+
+import CudaThreadMappingChart from "@/components/CudaThreadMappingChart.astro";
+import CudaRowMajorChart from "@/components/CudaRowMajorChart.astro";
+
+I have been wanting to try CUDA programming since forever and this weekend I finally got to do it. I started with taking a tour of high level working and its architecture including memory layout, thread mapping, and execution model.
+> What I cannot create, I do not understand. - Richard Feynman
+
+And what better way to create something than to implement a simple matrix multiplication kernel and profile it against NumPy? (Well, you got it, AI convinced me to do it, but still, it was a fun experiment!)
+
+So, why matrix multiplication? Because parallelism comes naturally to it. If we have two matrices `A` and `B` multiplied to get `C`, each value in `C` can be computed independently. That is a perfect fit for CUDA's execution model: assign one thread to compute one output cell of `C`, and let many threads work together across the GPU.
+
+More formally, each output element of
+
+$$
+C = A \times B
+$$
+
+can be computed independently as follows:
+
+$$
+C_{[row,col]} = \sum_{k=0}^{K-1} A_{[row,k]} B_{[k,col]}
+$$
+
+This kernel (just a fancy name for the matrix multiplication function) is what is called **naive** because it does not use shared memory, so do not get misled by the profiled results. It can be improved further, and I might try that too.
+
+---
+
+#### C's Shape
+You might already know this from linear algebra, but it helps to revisit how matrix shapes relate.
+
+If:
+
+- $A$ has shape $M \times K$
+- $B$ has shape $K \times N$
+
+then:
+
+- $C$ has shape $M \times N$
+
+So each output position needs:
+
+- one **row** from $A$
+- one **column** from $B$
+
+That is exactly why `row` and `col` are the two most important indices in the kernel.
+
+---
+
+#### CUDA's Thread Mapping
+
+CUDA organizes work in **blocks** and **grids**. A good way to imagine it is as containers, where each container holds many smaller ones inside.
+
+<CudaThreadMappingChart />
+
+```cpp
+dim3 block(16, 16);
+dim3 grid((N + block.x - 1) / block.x, (M + block.y - 1) / block.y);
+```
+
+The first line sets up a block size of 256 threads in a `16 x 16` arrangement.
+The grid is then computed in 2D:
+- `grid.x` covers columns (`N`) with `block.x` threads per block in x.
+- `grid.y` covers rows (`M`) with `block.y` threads per block in y.
+
+The `+ blockDim - 1` part is a neat integer trick to get ceiling division.
+For any dimension, it is equivalent to:
+
+`ceil(total / block_size) = (total + block_size - 1) / block_size`
+
+Quick intuition with your style of example:
+- If `N = 65` and `block.x = 16`, then `grid.x = (65 + 16 - 1) / 16 = 5`.
+- If `N = 64` and `block.x = 16`, then `grid.x = (64 + 16 - 1) / 16 = 4`.
+
+So this handles both non-multiples and exact multiples correctly.
+
+
+Now let us see how this 2D setup maps thread IDs to matrix coordinates.
+
+```cpp
+  int row = blockIdx.y * blockDim.y + threadIdx.y;
+  int col = blockIdx.x * blockDim.x + threadIdx.x;
+```
+
+- `blockIdx.y` is the block's row index in the grid
+- `blockDim.y` is the number of threads in the block's row
+- `threadIdx.y` is the thread's row index within its block
+- `row` gives the row number in the global grid of threads
+
+In the same way, `x` accounts for columns.
+
+Say we want to calculate the `row` and `col` values for `t12` in the chart above:
+- `blockIdx` = (1, 0)
+- `blockDim` = (3, 3)
+- `threadIdx` = (0, 1)
+
+```maths
+  row = blockIdx.y * blockDim.y + threadIdx.y
+    = 0 * 3 + 1
+    = 1
+
+  col = blockIdx.x * blockDim.x + threadIdx.x
+    = 1 * 3 + 0
+    = 3
+```
+
+Before we jump to the loop, here is the memory mapping it relies on.
+
+---
+
+#### Flattened Memory Mapping
+
+Even though we think in 2D, arrays are stored as 1D contiguous memory.
+
+<CudaRowMajorChart />
+
+In row-major layout:
+
+- `A[row, k]` becomes `A[row * K + k]`
+- `B[k, col]` becomes `B[k * N + col]`
+- `C[row, col]` becomes `C[row * N + col]`
+
+That is the core mapping used in the kernel.
+
+---
+
+Now we multiply each `row` element in `A` with each `col` element in `B` and sum them to get one output cell value.
+
+```cpp
+  for (int k=0; k < K; k++){
+    sum += da[row * K + k] * db[k * N + col];
+  }
+    dc[row * N + col] = sum;
+```
+
+- `da` and `db` represent the matrices `A` and `B` in the flattened memory layout.
+- `K` is the number of columns in `A` and rows in `B`.
+- `row * K + k` points to `A[row, k]`.
+- `row * K` jumps to the start of row `row` in `A`, and `+ k` moves across columns.
+- `k * N + col` points to `B[k, col]`.
+- `k * N` jumps to the start of row `k` in `B`, and `+ col` picks the target column.
+
+---
+
+#### The Kernel's Code
+
+Here is the code stripped down to the important parts:
+
+```cpp
+#include <iostream>
+using namespace std;
+
+// CUDA kernel: computes one output element per thread
+__global__ void matmul(float* da, float* db, float* dc, int M, int N, int K) {
+    int row = blockIdx.y * blockDim.y + threadIdx.y; // global row index
+    int col = blockIdx.x * blockDim.x + threadIdx.x; // global column index
+
+    if (row < M && col < N) { // bounds check for matrix dimensions
+        float sum = 0;
+        for (int k = 0; k < K; k++) { // dot product of row and column
+            sum += da[row * K + k] * db[k * N + col];
+        }
+        dc[row * N + col] = sum; // write result to output matrix
+    }
+}
+
+int main() {
+    int M = 8072, N = 8072, K = 8072;
+
+    // host memory allocation for matrices A, B, and C
+    float *ha = new float[M * K];
+    float *hb = new float[K * N];
+    float *hc = new float[M * N];
+
+    float *da, *db, *dc;
+
+    // initialize input matrices
+    for (int i = 0; i < M * K; i++) ha[i] = 1.0f;
+    for (int i = 0; i < K * N; i++) hb[i] = 1.0f;
+
+    // allocate device memory
+    cudaMalloc(&da, M * K * sizeof(float));
+    cudaMalloc(&db, K * N * sizeof(float));
+    cudaMalloc(&dc, M * N * sizeof(float));
+
+    // copy inputs from host to device
+    cudaMemcpy(da, ha, M * K * sizeof(float), cudaMemcpyHostToDevice);
+    cudaMemcpy(db, hb, K * N * sizeof(float), cudaMemcpyHostToDevice);
+
+    // define execution configuration (2D grid of 16x16 thread blocks)
+    dim3 block(16, 16);
+    dim3 grid((N + 15) / 16, (M + 15) / 16);
+
+    // create CUDA events for kernel timing
+    cudaEvent_t start, stop;
+    cudaEventCreate(&start);
+    cudaEventCreate(&stop);
+
+    cudaEventRecord(start); // start timing
+
+    // launch matrix multiplication kernel
+    matmul<<<grid, block>>>(da, db, dc, M, N, K);
+
+    cudaDeviceSynchronize(); // ensure kernel completion
+
+    cudaEventRecord(stop); // stop timing
+    cudaEventSynchronize(stop);
+
+    float ms = 0;
+    cudaEventElapsedTime(&ms, start, stop); // compute elapsed time
+
+    cout << "Kernel time: " << ms << " ms\n";
+
+    // copy result back to host
+    cudaMemcpy(hc, dc, M * N * sizeof(float), cudaMemcpyDeviceToHost);
+
+    // free device memory
+    cudaFree(da);
+    cudaFree(db);
+    cudaFree(dc);
+
+    // free host memory
+    delete[] ha;
+    delete[] hb;
+    delete[] hc;
+
+    return 0;
+}
+```
+
+Important syntax points:
+
+- `__global__` means the function is a CUDA kernel launched from the CPU and executed on the GPU.
+- `<<<grid, block>>>` is CUDA launch syntax.
+- `blockIdx`, `blockDim`, and `threadIdx` are built-in CUDA variables.
+- The boundary check matters because the grid is rounded up to cover the whole matrix.
+
+---
+
+I profiled this kernel against NumPy's matrix multiplication in a Colab notebook, and it demonstrated a 4x speedup for matrices of size `8072 x 8072`.
+You can access that code [here](https://gist.github.com/noor-malaika/5f2c3fcd2aed8a9e6eda0f7921ddd6cc), and see the results for yourself.
+
+*Note: I used a T4 GPU in Colab, so the results may vary based on the GPU used.*
