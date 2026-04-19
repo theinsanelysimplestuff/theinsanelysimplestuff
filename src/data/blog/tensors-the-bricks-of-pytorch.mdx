@@ -1,0 +1,282 @@
+---
+author: Malaika Noor
+pubDatetime: 2026-04-19T18:00:00.000Z
+modDatetime: 2026-04-19T18:00:00.000Z
+title: "Tensors: The Bricks of PyTorch"
+featured: true
+draft: false
+tags:
+  - pytorch
+  - tensors
+  - foundations
+  - memory layout
+  - stride
+ogImage: ""
+description: A structured introduction to tensors in PyTorch, covering storage, dtype, view, shape, stride, and offset as the core ideas behind how tensors work.
+hideEditPost: false
+timezone: ""
+---
+
+> First principles, Clarissa. Once you understand the ingredients, you can cook anything. - Massimo Bottura
+
+<figure>
+  <img src="/images/tensors-img1.png" alt="Tensors illustration" />
+  <figcaption>Tensors illustration. Created with Nano Banana.</figcaption>
+</figure>
+
+---
+
+This journey begins with a deceptively simple question: *what's a tensor?*
+
+Think of a tensor as an object, a reference that carries properties describing how it relates to the actual data it represents. It is not the data itself, it is metadata on top of a flat memory buffer.
+
+A tensor has six core components:
+
+```
+tensor
+├── storage   # the actual flat memory
+├── dtype     # what type of data lives there
+├── shape     # how elements are arranged
+├── stride    # how to navigate dimensions
+├── offset    # where the view begins
+└── view      # the logical lens over storage
+```
+
+Let's go through each one.
+
+---
+
+## Storage
+
+Storage is the raw, flat memory buffer that holds the tensor's elements. The key insight here:
+
+> Two tensors can point to the same storage.
+
+This is possible because a tensor does not *own* its data. It holds a reference to a memory location. This makes operations like slicing and transposing cheap since no data gets copied, just a new reference with different metadata is created.
+
+Try this in PyTorch:
+
+```python
+import torch
+
+base = torch.arange(12)
+view = base.view(3, 4)
+slice_view = view[:, 1:]
+
+print("base:", base)
+print("view:\n", view)
+print("slice_view:\n", slice_view)
+print("same storage (base/view):", base.untyped_storage().data_ptr() == view.untyped_storage().data_ptr())
+print("same storage (base/slice_view):", base.untyped_storage().data_ptr() == slice_view.untyped_storage().data_ptr())
+
+base[1] = 999
+print("\nafter mutating base:")
+print(view)
+print(slice_view)
+```
+
+---
+
+## Dtype
+
+The data type of the elements: `int8`, `float32`, `bfloat16`, etc. This deserves its own post, but for now just know it determines how many bytes each element occupies and how the values are interpreted.
+
+Try this in PyTorch:
+
+```python
+import torch
+
+x = torch.tensor([1, 2, 3], dtype=torch.int8)
+y = torch.tensor([1.0, 2.0, 3.0], dtype=torch.float32)
+z = torch.tensor([1.0, 2.0, 3.0], dtype=torch.bfloat16)
+
+print(x.dtype, x.element_size(), "byte(s) per element")
+print(y.dtype, y.element_size(), "byte(s) per element")
+print(z.dtype, z.element_size(), "byte(s) per element")
+```
+
+---
+
+## View
+
+A view is a logical lens over the storage. It does not hold any data. Instead, it carries metadata: shape, stride, and offset. When multiple tensors point to the same storage, what differs between them *is* the view.
+
+<figure>
+  <img src="/images/tensors-img2.png" alt="Tensor view diagram" />
+  <figcaption>Tensor view diagram. Created with Nano Banana.</figcaption>
+</figure>
+
+Try this in PyTorch:
+
+```python
+import torch
+
+x = torch.arange(6)
+a = x.view(2, 3)
+b = a.t()
+
+print("a:\n", a)
+print("b:\n", b)
+print("same storage:", a.untyped_storage().data_ptr() == b.untyped_storage().data_ptr())
+print("a stride:", a.stride())
+print("b stride:", b.stride())
+```
+
+---
+
+## Shape
+
+Shape is the tuple that defines how elements are arranged for a given view.
+
+Given a base storage of 12 elements:
+
+```
+base: [0  1  2  3  4  5  6  7  8  9  10  11]
+```
+
+The same 12 elements can be viewed in multiple ways:
+
+```
+View 1: shape(3, 4)       -> 3 rows, 4 columns
+View 2: shape(2, 3, 2)    -> 2 blocks of 3x2
+View 3: shape(2, 2, 3)    -> 2 blocks of 2x3
+```
+
+No data moves. The interpretation changes.
+
+Try this in PyTorch:
+
+```python
+import torch
+
+base = torch.arange(12)
+
+print(base.view(3, 4))
+print()
+print(base.view(2, 3, 2))
+print()
+print(base.view(2, 2, 3))
+```
+
+---
+
+## Stride
+
+This is where it gets interesting.
+
+Stride tells you the number of elements to *jump* in flat memory to move one step along a given dimension.
+
+For a tensor with shape $(d_0, d_1, \ldots, d_n)$, the stride formula is:
+
+$$\text{stride}[d_n] = 1$$
+
+$$\text{stride}[d_i] = \prod_{j=i+1}^{n} d_j$$
+
+Take this example:
+
+```
+base: [0  1  2  3  4  5  6  7  8  9  10  11]
+
+shape(2, 3, 2):
+
+[
+  [              <- block 0
+    [0,  1],     <- row 0
+    [2,  3],     <- row 1
+    [4,  5]      <- row 2
+  ],
+  [              <- block 1
+    [6,  7],
+    [8,  9],
+    [10, 11]
+  ]
+]
+```
+
+Stride: $(6, 2, 1)$
+
+- Jump **6** elements to move from block 0 to block 1
+- Jump **2** elements to move from one row to the next
+- Jump **1** element to move along a column (adjacent in memory)
+
+This is **row-major layout**: elements within a row are contiguous in memory, which is why the last dimension stride is always 1.
+
+<figure>
+  <img src="/images/tensors-img3.png" alt="Stride diagram" />
+  <figcaption>Stride diagram. Created with Nano Banana.</figcaption>
+</figure>
+
+Try this in PyTorch:
+
+```python
+import torch
+
+x = torch.arange(12).view(2, 3, 2)
+print("x shape:", x.shape)
+print("x stride:", x.stride())
+
+y = x.transpose(0, 1)
+print("\ny shape:", y.shape)
+print("y stride:", y.stride())
+print(y)
+```
+
+---
+
+## Offset
+
+Every view has an offset: the index in flat storage where the view *begins*.
+
+By default, offset is 0, meaning the view starts at the first element. But if you slice a tensor, the resulting view may start at index 3 or 5 or anywhere else in the storage.
+
+The formula to resolve any element from its multi-dimensional index to a flat storage index:
+
+$$\text{storage\_index} = \text{offset} + \sum_{i=0}^{n} \left( \text{indices}[i] \times \text{stride}[i] \right)$$
+
+This single formula is what makes the whole system work. Shape, stride, and offset together fully describe *any* view over *any* flat memory layout.
+
+Try this in PyTorch:
+
+```python
+import torch
+
+x = torch.arange(10)
+y = x[3:]
+
+print("x:", x)
+print("y:", y)
+print("y storage_offset():", y.storage_offset())
+print("y stride():", y.stride())
+```
+
+---
+
+## Putting It Together
+
+```
+tensor[i][j][k]
+       |
+       v
+storage_index = offset + i*stride[0] + j*stride[1] + k*stride[2]
+```
+
+A tensor is not a multidimensional array. It is a structured pointer into flat memory with rules for navigation. Everything else, slicing, transposing, broadcasting, is just arithmetic on these six properties.
+
+Try this in PyTorch:
+
+```python
+import torch
+
+flat = torch.arange(12)
+x = flat.view(2, 3, 2)
+
+index = (1, 2, 0)
+offset = x.storage_offset()
+stride = x.stride()
+
+storage_index = offset + index[0] * stride[0] + index[1] * stride[1] + index[2] * stride[2]
+
+print("x[1, 2, 0] =", x[index].item())
+print("flat[storage_index] =", flat[storage_index].item())
+print("computed storage_index =", storage_index)
+```
