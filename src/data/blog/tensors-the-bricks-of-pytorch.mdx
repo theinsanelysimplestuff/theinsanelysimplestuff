@@ -25,10 +25,14 @@ timezone: ""
 </figure>
 
 ---
+I've been exploring torch more deeply lately, and if you want to understand what is really happening under the hood, brushing up on tensors is a must.
 
-This journey begins with a deceptively simple question: *what's a tensor?*
+If you've used torch before, tensors probably felt like multi-dimensional arrays that hold data. That description is not wrong, but it is only the surface. Underneath, the story is more careful than that, and once you see it clearly, a lot of PyTorch behavior starts making much more sense.
 
-Think of a tensor as an object, a reference that carries properties describing how it relates to the actual data it represents. It is not the data itself, it is metadata on top of a flat memory buffer.
+This is exactly the kind of thing that can feel slippery at first. You slice something, transpose something, reshape something, and suddenly you are left wondering why the values are behaving differently from what you expected. Usually the confusion is not in the data itself. It is in how the tensor is looking at that data.
+
+### What's a Tensor?
+Think of a tensor as an object, a reference that carries properties describing how it relates to the actual data it represents. It is not the data itself. It is metadata layered on top of a flat memory buffer.
 
 A tensor has six core components:
 
@@ -48,11 +52,11 @@ Let's go through each one.
 
 ## Storage
 
-Storage is the raw, flat memory buffer that holds the tensor's elements. The key insight here:
+Storage is the raw, flat memory buffer that holds the tensor's elements. This is the first big idea worth holding onto:
 
 > Two tensors can point to the same storage.
 
-This is possible because a tensor does not *own* its data. It holds a reference to a memory location. This makes operations like slicing and transposing cheap since no data gets copied, just a new reference with different metadata is created.
+This is possible because a tensor does not *own* its data. It holds a reference to a memory location. That is what makes operations like slicing and transposing so cheap: no data needs to be copied, just a new tensor object with different metadata gets created.
 
 Try this in PyTorch:
 
@@ -79,7 +83,7 @@ print(slice_view)
 
 ## Dtype
 
-The data type of the elements: `int8`, `float32`, `bfloat16`, etc. This deserves its own post, but for now just know it determines how many bytes each element occupies and how the values are interpreted.
+This is the type of the elements: `int8`, `float32`, `bfloat16`, and so on. It deserves its own post, but for now the main thing to remember is that dtype decides how many bytes each element occupies and how those bytes should be interpreted.
 
 Try this in PyTorch:
 
@@ -99,7 +103,7 @@ print(z.dtype, z.element_size(), "byte(s) per element")
 
 ## View
 
-A view is a logical lens over the storage. It does not hold any data. Instead, it carries metadata: shape, stride, and offset. When multiple tensors point to the same storage, what differs between them *is* the view.
+A view is a logical lens over the storage. It does not hold any data by itself. Instead, it carries metadata: shape, stride, and offset. When multiple tensors point to the same storage, what differs between them *is* the view.
 
 <figure>
   <img src="/images/tensors-img2.png" alt="Tensor view diagram" />
@@ -126,7 +130,7 @@ print("b stride:", b.stride())
 
 ## Shape
 
-Shape is the tuple that defines how elements are arranged for a given view.
+Shape is the tuple that tells you how elements are arranged for a given view.
 
 Given a base storage of 12 elements:
 
@@ -142,7 +146,7 @@ View 2: shape(2, 3, 2)    -> 2 blocks of 3x2
 View 3: shape(2, 2, 3)    -> 2 blocks of 2x3
 ```
 
-No data moves. The interpretation changes.
+The data does not move. Only the interpretation changes.
 
 Try this in PyTorch:
 
@@ -162,9 +166,9 @@ print(base.view(2, 2, 3))
 
 ## Stride
 
-This is where it gets interesting.
+This is where tensors start becoming genuinely fun.
 
-Stride tells you the number of elements to *jump* in flat memory to move one step along a given dimension.
+Stride tells you how many elements to *jump* in flat memory when you move one step along a given dimension.
 
 For a tensor with shape $(d_0, d_1, \ldots, d_n)$, the stride formula is:
 
@@ -199,7 +203,7 @@ Stride: $(6, 2, 1)$
 - Jump **2** elements to move from one row to the next
 - Jump **1** element to move along a column (adjacent in memory)
 
-This is **row-major layout**: elements within a row are contiguous in memory, which is why the last dimension stride is always 1.
+This is **row-major layout**. Elements within a row are contiguous in memory, which is why the last dimension stride is always 1.
 
 <figure>
   <img src="/images/tensors-img3.png" alt="Stride diagram" />
@@ -227,13 +231,13 @@ print(y)
 
 Every view has an offset: the index in flat storage where the view *begins*.
 
-By default, offset is 0, meaning the view starts at the first element. But if you slice a tensor, the resulting view may start at index 3 or 5 or anywhere else in the storage.
+By default, the offset is 0, which means the view starts at the very first element. But the moment you slice a tensor, the resulting view may begin at index 3 or 5 or anywhere else in that same storage.
 
-The formula to resolve any element from its multi-dimensional index to a flat storage index:
+Here is the formula that maps any multi-dimensional index to its flat storage index:
 
 $$\text{storage\_index} = \text{offset} + \sum_{i=0}^{n} \left( \text{indices}[i] \times \text{stride}[i] \right)$$
 
-This single formula is what makes the whole system work. Shape, stride, and offset together fully describe *any* view over *any* flat memory layout.
+This one formula is what makes the whole system click. Shape, stride, and offset together fully describe *any* view over *any* flat memory layout.
 
 Try this in PyTorch:
 
@@ -260,7 +264,7 @@ tensor[i][j][k]
 storage_index = offset + i*stride[0] + j*stride[1] + k*stride[2]
 ```
 
-A tensor is not a multidimensional array. It is a structured pointer into flat memory with rules for navigation. Everything else, slicing, transposing, broadcasting, is just arithmetic on these six properties.
+A tensor is not just a multidimensional array. It is a structured pointer into flat memory, along with the rules that explain how to navigate it. Slicing, transposing, and broadcasting all follow from arithmetic on these six properties.
 
 Try this in PyTorch:
 
