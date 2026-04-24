@@ -23,14 +23,22 @@ import CudaRowMajorChart from "@/components/CudaRowMajorChart.astro";
 
 > What I cannot create, I do not understand. - Richard Feynman
 
-I had wanted to try CUDA programming for a long time, and this weekend I finally did. I started by getting a high-level feel for how it works: its architecture, memory layout, thread mapping, and execution model.
+I wanted to try CUDA programming for a long time, and this weekend I finally checked it off.
 
-What better way to learn than implement a simple matrix multiplication kernel and profile it against NumPy? (Okay, AI did convince me to do it, but it was still a fun experiment.)
+When learning something new, I follow something I call the **W3** rule.
 
-So, why matrix multiplication? Because parallelism comes naturally to it. If we have two matrices `A` and `B` multiplied to get `C`, each value in `C` can be computed independently.
+Each W stands for:
+* What - What is cuda?
+* Why - Why cuda?
+* How - How to cuda?
 
-That is a perfect fit for CUDA's execution model: assign one thread to compute one output cell of `C`, and let many threads work together across the GPU.
-Importantly, one thread is not doing just one multiplication. It is responsible for one final output cell, so it has to compute the full dot product for that cell.
+## What is CUDA?
+
+Matrix multiplication is by far the simplest hands-on exercise to start learning cuda, I'd say it's the `Hello World` of cuda programming.
+Why? Because parallelism shows up very naturally here. If we multiply two matrices `A` and `B` to get `C`, each value in `C` can be computed independently.
+
+That is a perfect fit for CUDA's execution model: give one thread one output cell of `C`, then let many threads work across the GPU at the same time.
+One small but important detail: one thread is not doing just one multiplication. It is responsible for one final output cell, so it still has to compute the full dot product for that cell.
 More formally, each output element of
 
 $$
@@ -43,8 +51,8 @@ $$
 C_{[row,col]} = \sum_{k=0}^{K-1} A_{[row,k]} B_{[k,col]}
 $$
 
-This kernel, which is just a fancy name for the matrix multiplication function, is considered **naive** because it does not use shared memory. In other words, each thread repeatedly goes back to global memory instead of first cooperatively caching tiles of `A` and `B`.
-So do not read too much into the profiled results just yet. It can be improved further, and I might try that next.
+This kernel, which is just a fancy name for the matrix multiplication function, is considered **naive** because it does not use shared memory. In other words, each thread keeps going back to global memory instead of first cooperating with nearby threads to cache tiles of `A` and `B`.
+So I would not read too much into the profiled results just yet. There is still plenty of room to improve it, and that is part of what makes this a nice first CUDA exercise.
 
 ---
 
@@ -65,17 +73,17 @@ So each output position needs:
 - one **row** from $A$
 - one **column** from $B$
 
-That is exactly why `row` and `col` are the two most important indices in the kernel.
+That is exactly why `row` and `col` are the two indices that matter most in the kernel.
 
 ---
 
 #### CUDA's Thread Mapping
 
-CUDA organizes work into **blocks** and **grids**. One simple way to picture it is as larger containers that each hold many smaller ones.
+CUDA organizes work into **blocks** and **grids**. An easy way to picture it is as larger containers that each hold many smaller ones.
 
 <CudaThreadMappingChart />
 
-In the chart, each larger box is a block, and each small square inside it is a thread. The important idea is not that a thread has some magical global thread number. The real story is simpler: each thread knows which block it is in, and where it sits inside that block. From those two pieces, it can compute its output coordinates `(row, col)`.
+In the chart, each larger box is a block, and each small square inside it is a thread. The important idea is not that a thread has some mysterious global thread number floating around. The real story is simpler: each thread knows which block it is in, and where it sits inside that block. From those two pieces, it can compute its output coordinates `(row, col)`.
 
 ```cpp
 dim3 block(16, 16);
@@ -87,7 +95,7 @@ The grid is then computed in 2D:
 - `grid.x` covers columns (`N`) with `block.x` threads per block in x.
 - `grid.y` covers rows (`M`) with `block.y` threads per block in y.
 
-The `+ block_size - 1` part is a neat integer trick to get ceiling division.
+The `+ block_size - 1` part is a neat integer trick for ceiling division.
 For any dimension, it is equivalent to:
 
 `ceil(total / block_size) = (total + block_size - 1) / block_size`
@@ -97,7 +105,6 @@ Quick intuition:
 - If `N = 64` and `block.x = 16`, then `grid.x = (64 + 16 - 1) / 16 = 4`.
 
 So this handles both exact multiples and dimensions that do not divide evenly.
-
 
 Now let us see how this 2D setup maps block coordinates and thread coordinates to matrix coordinates.
 
@@ -111,14 +118,14 @@ Now let us see how this 2D setup maps block coordinates and thread coordinates t
 - `threadIdx.y` is the thread's row index within its block
 - `row` gives the output row this thread is responsible for
 
-In the same way, the `x` values account for columns.
+The exact same logic in `x` handles the columns.
 
-So you can read the formula as:
+So you can read the formula like this:
 
 - `blockIdx.y * blockDim.y` jumps to the first row covered by this block
 - `+ threadIdx.y` moves to this thread's row inside the block
 
-The same logic applies in `x` for columns.
+The same reasoning applies in `x` for columns.
 
 Say we want to calculate the `row` and `col` values for the thread at local position `(0, 1)` inside block `(1, 0)` in the chart above:
 - `blockIdx` = (1, 0)
@@ -135,7 +142,7 @@ Say we want to calculate the `row` and `col` values for the thread at local posi
     = 3
 ```
 
-Before we jump into the loop, here is the memory mapping it relies on.
+Before we jump into the loop, it helps to look at the memory mapping this relies on.
 
 ---
 
@@ -151,12 +158,12 @@ In row-major layout:
 - `B[k, col]` becomes `B[k * N + col]`
 - `C[row, col]` becomes `C[row * N + col]`
 
-That is the core mapping used in the kernel.
+That is the core mapping the kernel keeps using behind the scenes.
 
 ---
 
 Now we multiply the elements in row `row` of `A` with the elements in column `col` of `B`, then sum them to get one output value.
-That means each thread walks along one row of `A` and one column of `B`, pairing entries one by one.
+So each thread walks along one row of `A` and one column of `B`, pairing entries one by one.
 
 ```cpp
   for (int k=0; k < K; k++){
@@ -172,13 +179,13 @@ That means each thread walks along one row of `A` and one column of `B`, pairing
 - `k * N + col` points to `B[k, col]`.
 - `k * N` jumps to the start of row `k` in `B`, and `+ col` picks the target column.
 
-So even though one thread owns just one output cell, it still does `K` multiply-add steps to finish that cell.
+So even though one thread owns just one output cell, it still has to do `K` multiply-add steps to finish that cell.
 
 ---
 
-#### The Kernel's Code
+## Kernel's Code - The HOW!
 
-Here is the code stripped down to the important parts:
+Here is the code stripped down to the parts that matter most:
 
 ```cpp
 #include <iostream>
@@ -272,8 +279,10 @@ Important syntax points:
 
 ---
 
+## BEATS NumPy!? -> That's Why! 
+
 I profiled this kernel against NumPy's matrix multiplication in a Colab notebook, and for matrices of size `8072 x 8072`, it showed about a 4x speedup.
-That does not mean this kernel is anywhere near optimal. It just means that even a simple "one thread per output cell" GPU version can outperform a CPU-side baseline when the matrices are large enough.
+That does not mean this kernel is anywhere near optimal. It just shows that even a simple "one thread per output cell" GPU version can outperform a CPU-side baseline once the matrices are large enough.
 
 You can find that code [here](https://gist.github.com/noor-malaika/7aa0e60b60f878bd26eb16282bbb95b8) if you want to look through the notebook and results yourself.
 
