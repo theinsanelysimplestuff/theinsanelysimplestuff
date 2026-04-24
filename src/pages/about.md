@@ -2,7 +2,7 @@
 layout: ../layouts/AboutLayout.astro
 title: "About"
 ---
-Hi 👋 and welcome to **TheInsanelySimpleStuff** ✨.
+Hi 👋 and welcome to **CacheNova** ✨.
 
 I’m Malaika, a curious learner writing about two main things: CS 💻 and Maths ➗, intending to focus more on AI and Systems.
 

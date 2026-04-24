@@ -1,9 +1,9 @@
 export const SITE = {
-  website: "https://theinsanelysimplestuff.github.io/",
+  website: "https://cachenova.github.io/",
   author: "Malaika Noor",
   profile: "", // portfolio link
   desc: "Writings about AI, maths, programming, and my curiosity about the world.",
-  title: "TheInsanelySimpleStuff",
+  title: "CacheNova",
   ogImage: "",
   lightAndDarkMode: true,
   postPerIndex: 4,

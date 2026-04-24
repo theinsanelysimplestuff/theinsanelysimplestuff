@@ -1,6 +1,6 @@
-# TheInsanelySimpleStuff
+# Cache Nova
 
-### Description
+# Description
 
 My personal blog focused on CS (especially AI), maths and research paper reproduction.
 
